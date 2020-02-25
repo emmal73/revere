@@ -1,0 +1,40 @@
+---
+title: "Southern women"
+author: "Emma Livingston"
+date: "2/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(igraph)
+library(readr)
+```
+
+```{r load_data}
+southern_women <- as.matrix(read.csv("data/southern_women.csv", row.names = 1))
+```
+
+```{r}
+person_net <- southern_women %*% t(southern_women)
+event_net <- t(southern_women) %*% southern_women
+```
+
+```{r}
+diag(event_net) <- NA
+diag(person_net) <- NA
+```
+
+```{r}
+person_g <- graph.adjacency(person_net,mode="undirected",
+                            weighted=NULL, diag=FALSE)
+
+
+event_g <- graph.adjacency(event_net, weighted=TRUE,
+                           mode="undirected", diag=FALSE)
+
+```
+
