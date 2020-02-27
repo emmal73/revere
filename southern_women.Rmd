@@ -14,27 +14,207 @@ library(igraph)
 library(readr)
 ```
 
+Data source: [moreno.ss.uci.edu](http://moreno.ss.uci.edu/davis.dat)
+
 ```{r load_data}
+#Create a matrix (person by event) of the women and events
 southern_women <- as.matrix(read.csv("data/southern_women.csv", row.names = 1))
 ```
 
 ```{r}
+#create a person by person matrix
 person_net <- southern_women %*% t(southern_women)
-event_net <- t(southern_women) %*% southern_women
-```
 
-```{r}
+#create an event by event matrix
+event_net <- t(southern_women) %*% southern_women
+
+#set the diagonals of these matrices as NA
 diag(event_net) <- NA
 diag(person_net) <- NA
 ```
 
 ```{r}
+#Create a graph adjacency list by person that is weighted and undirected
 person_g <- graph.adjacency(person_net,mode="undirected",
                             weighted=NULL, diag=FALSE)
 
 
+#Create a graph adjacency list by event that is weighted and undirected
 event_g <- graph.adjacency(event_net, weighted=TRUE,
                            mode="undirected", diag=FALSE)
+
+```
+
+```{r}
+#create a layout schema and weight for the event graph
+la <- layout.fruchterman.reingold(event_g)
+e_wt <- get.edge.attribute(event_g, "weight")
+```
+
+```{r}
+#plot the events as a pdf
+pdf(file="figures/group-view.pdf", width=10, height=10)
+plot(event_g, layout=la, vertex.size=15,edge.width=e_wt,
+     vertex.label=V(event_g)$name)
+```
+
+```{r}
+#plot the events as a png
+png(file="figures/group-view.png", width=1000, height=1000, res=150)
+plot(event_g, layout=la, vertex.size=15,edge.width=e_wt,
+     vertex.label=V(event_g)$name)
+
+```
+
+```{r}
+#plot the people as a pdf
+pdf(file="figures/southern_women-network.pdf", width=22, height=17,pointsize=8)
+la2 <- layout.fruchterman.reingold(person_g)
+e_wt2 <- get.edge.attribute(person_g, "weight")
+plot(person_g, layout=la2, vertex.size=3,edge.width=0.1,
+     vertex.label=V(person_g)$name)
+
+```
+
+```{r}
+#plot the people as a png
+png(file="figures/southern_women-network.png", width=2200, height=1700, res=150)
+la3 <- layout.fruchterman.reingold(person_g)
+e_wt3 <- get.edge.attribute(person_g, "weight")
+plot(person_g, layout=la3, vertex.size=3,edge.width=0.1,
+     vertex.label=V(person_g)$name)
+
+```
+
+```{r}
+#person by person matrix in the other direction
+person2_net <- southern_women %*% t(southern_women)
+
+#make the diagonal NA
+diag(person2_net) <- NA
+
+#transposed person graph
+person2_g <- graph.adjacency(person2_net, mode="undirected", weighted=TRUE, diag=FALSE)
+
+#transposed layout and edge weight
+la4 <- layout.fruchterman.reingold(person2_g)
+e_wt4 <- get.edge.attribute(person2_g, "weight")
+```
+
+```{r}
+#transposed person graph as pdf
+pdf(file="figures/person-weighted-view.pdf", width=20, height=20)
+plot(person2_g, layout=la4, vertex.size=15,edge.width=e_wt4,
+     vertex.label=V(person2_g)$name)
+```
+
+```{r}
+#transposed person graph as png
+png(file="figures/person-weighted-view.png", width=2000, height=2000, res=150)
+plot(person2_g, layout=la4, vertex.size=15,edge.width=e_wt4,
+     vertex.label=V(person2_g)$name)
+```
+
+# Centrality
+
+Betweenness centrality: the measure of centralit yin a graph based on the shortest paths. For every pari of vertices in a connected graph, there exists at least one shortest path between the vertices such that either the number of edges that the path passes through or the sum of the weights of the edges is minimized. The betweenness centrality for each vertex is the number of these shortest paths that pass through the vertex. -- [Wikipedia Betweenness centrality](https://en.wikipedia.org/wiki/Betweenness_centrality)
+
+
+```{r betweenness}
+#calculate betweenness
+btwn_person <- betweenness(person_g)
+names(btwn_person) <- V(person_g)$name
+ind <- order(-btwn_person)
+btwn_person[ind][1:10]
+btwn_person[ind]
+```
+
+MOST POPULAR: Theresa, Evelyn, Nora, Ruth, Sylvia
+
+LEAST POPULAR: Flora, Olivia, Dorothy, Helen, Nora
+
+```{r eigenvector}
+cent_eig <- evcent(person_g)
+names(cent_eig$vector) <- V(person_g)$name
+ind <- order(-cent_eig$vector)
+cent_eig$vector[ind][1:10]
+```
+
+MOST POPULAR: Theresa, Evelyn, Sylvia, Brenda, Laura
+
+LEAST POPULAR: Flora, Olivia, Charlotte, Pearl
+
+```{r kleinberg_authority}
+cent_klein <- authority.score(person_g)
+names(cent_klein$vector) <- V(person_g)$name
+ind <- order(-cent_klein$vector)
+cent_klein$vector[ind][1:10]
+
+```
+
+MOST POPULAR: Theresa, Evelyn, Sylvia, Brenda, Laura
+
+LEAST POPULAR: Flora, Olivia, Charlotte, Pearl
+
+```{r bonacich_power}
+cent_bonpow <- bonpow(person_g, exponent=1)
+names(cent_bonpow) <-  V(person_g)$name
+ind <- order(cent_bonpow)
+cent_bonpow[ind][1:10]
+
+```
+
+Losest Bonacich Power centrality: Pearl, Myrna, Dorothy, Evelyn, Frances
+
+```{r}
+ind <- cent_bonpow < -1.35
+
+col_vec <- rep("")
+
+pdf(file="figures/southern_women-network-reduced.pdf", width=22, height=17,pointsize=8)
+person_g_copy <- person_g
+la5 <- layout.fruchterman.reingold(person_g_copy)
+plot(person_g_copy, layout=la5, vertex.size=3,
+     vertex.label=V(person_g_copy)$name)
+```
+
+```{r}
+png(file="figures/southern_women-network-reduced.png", width=2200, height=1700, res=140)
+la6 <- layout.fruchterman.reingold(person_g_copy)
+plot(person_g_copy, layout=la6, vertex.size=3,
+     vertex.label=V(person_g_copy)$name)
+
+```
+
+```{r}
+png(file="figures/southern_women-test.png", width=2200, height=1700)
+com <- spinglass.community(person_g, spins=5)
+V(person_g)$color <- com$membership+1
+person_g <- set.graph.attribute(person_g, "layout", layout.fruchterman.reingold(person_g))
+plot(person_g)
+
+```
+
+```{r}
+png(file="figures/southern_women-test.png", width=2000, height=1000)
+lay <- layout.fruchterman.reingold(person_g)
+pr_id <- 200
+# Plot the eigevector and betweenness centrality
+par(mfrow=c(1,2))
+plot(bonpow(person_g, exponent=1), betweenness(person_g))
+
+```
+
+```{r}
+# e_rank <- rank(-evcent(person_g)$vector)
+# b_rank <- rank(-betweenness(person_g))
+# c_rank <- rank(-bonpow(person_g, exponent=1))
+# s_top <- c_rank < 10 | b_rank < 10
+# text(bonpow(person_g)[s_top], betweenness(person_g)[s_top], cex=0.6, pos=4, labels=V(person_g)$name[s_top])
+# V(person_g)[pr_id]$color <- "yellow"
+# E(person_g)$color="grey95"
+# plot(person_g, layout=lay, vertex.size=2,
+#        vertex.label.cex=0.6, vertex.label=V(person_g)$name)
 
 ```
 
